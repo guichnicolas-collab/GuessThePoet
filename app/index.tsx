@@ -18,6 +18,7 @@ export default function Index() {
   >();
   const [score, setScore] = useState<number>(0);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  let scrollViewRef = useRef<ScrollView | null>(null);
   const fallbackPoetsRef = useRef<Set<string>>(
     new Set([
       "Amy Levy",
@@ -83,7 +84,9 @@ export default function Index() {
   if (isCorrect !== null) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>{isCorrect ? "Correct" : "Incorrect"}</Text>
+        <Text style={{ fontWeight: "bold", fontSize: 24 }}>
+          {isCorrect ? "Correct" : "Incorrect"}
+        </Text>
       </View>
     );
   }
@@ -101,25 +104,38 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Guess the Poet</Text>
-      <ScrollView style={{ marginBottom: 24 }}>
+      <Text style={styles.title}>Poet Guessr</Text>
+      <ScrollView
+        ref={scrollViewRef}
+        onContentSizeChange={() => {
+          if (scrollViewRef) {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }
+        }}
+        style={{ marginBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+      >
         {poems[correctPoemIndex].lines
           .slice(0, linesShown)
           .map((line, index) => (
-            <Text key={index}>{line}</Text>
+            <Text key={index} style={{ marginBottom: 6, fontSize: 16 }}>
+              {line.trim()}
+            </Text>
           ))}
       </ScrollView>
-      {poems.map((poem, index) => (
-        <Pressable
-          key={index}
-          style={styles.poetChoiceButton}
-          onPress={() => {
-            selectPoet(index);
-          }}
-        >
-          <Text>{poem.author}</Text>
-        </Pressable>
-      ))}
+      <View style={{ gap: 5 }}>
+        {poems.map((poem, index) => (
+          <Pressable
+            key={index}
+            style={styles.poetChoiceButton}
+            onPress={() => {
+              selectPoet(index);
+            }}
+          >
+            <Text>{poem.author}</Text>
+          </Pressable>
+        ))}
+      </View>
       <Pressable
         onPress={handleButtonPress}
         style={
@@ -137,7 +153,8 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 60,
+    paddingTop: 60,
+    paddingBottom: 40,
     paddingHorizontal: 20,
     backgroundColor: "white",
   },
@@ -157,20 +174,25 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: "black",
     borderRadius: 10,
+    marginTop: 16,
   },
   disabledNewLineButton: {
     alignSelf: "center",
     padding: 12,
     backgroundColor: "lightgray",
     borderRadius: 10,
+    marginTop: 16,
   },
   newLineText: {
     color: "white",
     fontWeight: "bold",
   },
   poetChoiceButton: {
-    backgroundColor: "lightgray",
-    padding: 6,
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: "gray",
+    paddingHorizontal: 6,
+    paddingVertical: 12,
     borderRadius: 10,
   },
 });
