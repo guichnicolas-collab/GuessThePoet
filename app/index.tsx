@@ -138,6 +138,22 @@ const poets = [
   "William Wordsworth",
 ];
 
+const knuthShuffle = (array: string[]) => {
+  let currentIndex = array.length;
+  // While there remain elements to shuffle...
+  while (currentIndex !== 0) {
+    // Pick a remaining element...
+    let randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex],
+      array[currentIndex],
+    ];
+  }
+  return array;
+};
+
 export default function Index() {
   const [poem, setPoem] = useState<Poem | null>(null);
   const [linesShown, setLinesShown] = useState<number>(1);
@@ -150,32 +166,10 @@ export default function Index() {
     fetch("https://poetrydb.org/random/1")
       .then((res) => res.json())
       .then((data) => {
-        let currentIndex = poets.length;
-        // While there remain elements to shuffle...
-        while (currentIndex !== 0) {
-          // Pick a remaining element...
-          let randomIndex = Math.floor(Math.random() * currentIndex);
-          currentIndex--;
-          // And swap it with the current element.
-          [poets[currentIndex], poets[randomIndex]] = [
-            poets[randomIndex],
-            poets[currentIndex],
-          ];
-        }
-        let choices = poets.slice(0, 3);
+        const shuffledPoets = knuthShuffle(poets);
+        let choices = shuffledPoets.slice(0, 3);
         choices.push(data[0].author);
-        currentIndex = choices.length;
-        // While there remain elements to shuffle...
-        while (currentIndex !== 0) {
-          // Pick a remaining element...
-          let randomIndex = Math.floor(Math.random() * currentIndex);
-          currentIndex--;
-          // And swap it with the current element.
-          [choices[currentIndex], choices[randomIndex]] = [
-            choices[randomIndex],
-            choices[currentIndex],
-          ];
-        }
+        choices = knuthShuffle(choices);
         setPoem(data[0]);
         setPossibleAuthors(choices);
       });
