@@ -6,138 +6,6 @@ type Poem = {
   lines: string[];
 };
 
-const poets = [
-  "Adam Lindsay Gordon",
-  "Alan Seeger",
-  "Alexander Pope",
-  "Algernon Charles Swinburne",
-  "Ambrose Bierce",
-  "Amy Levy",
-  "Andrew Marvell",
-  "Ann Taylor",
-  "Anne Bradstreet",
-  "Anne Bronte",
-  "Anne Killigrew",
-  "Anne Kingsmill Finch",
-  "Annie Louisa Walker",
-  "Arthur Hugh Clough",
-  "Ben Jonson",
-  "Charles Kingsley",
-  "Charles Sorley",
-  "Charlotte Bronte",
-  "Charlotte Smith",
-  "Christina Rossetti",
-  "Christopher Marlowe",
-  "Christopher Smart",
-  "Coventry Patmore",
-  "Edgar Allan Poe",
-  "Edmund Spenser",
-  "Edward Fitzgerald",
-  "Edward Lear",
-  "Edward Taylor",
-  "Edward Thomas",
-  "Eliza Cook",
-  "Elizabeth Barrett Browning",
-  "Emily Bronte",
-  "Emily Dickinson",
-  "Emma Lazarus",
-  "Ernest Dowson",
-  "Eugene Field",
-  "Francis Thompson",
-  "Geoffrey Chaucer",
-  "George Eliot",
-  "George Gordon, Lord Byron",
-  "George Herbert",
-  "George Meredith",
-  "Gerard Manley Hopkins",
-  "Helen Hunt Jackson",
-  "Henry David Thoreau",
-  "Henry Vaughan",
-  "Henry Wadsworth Longfellow",
-  "Hugh Henry Brackenridge",
-  "Isaac Watts",
-  "James Henry Leigh Hunt",
-  "James Thomson",
-  "James Whitcomb Riley",
-  "Jane Austen",
-  "Jane Taylor",
-  "John Clare",
-  "John Donne",
-  "John Dryden",
-  "John Greenleaf Whittier",
-  "John Keats",
-  "John McCrae",
-  "John Milton",
-  "John Trumbull",
-  "John Wilmot",
-  "Jonathan Swift",
-  "Joseph Warton",
-  "Joyce Kilmer",
-  "Julia Ward Howe",
-  "Jupiter Hammon",
-  "Katherine Philips",
-  "Lady Mary Chudleigh",
-  "Lewis Carroll",
-  "Lord Alfred Tennyson",
-  "Louisa May Alcott",
-  "Major Henry Livingston, Jr.",
-  "Mark Twain",
-  "Mary Elizabeth Coleridge",
-  "Matthew Arnold",
-  "Matthew Prior",
-  "Michael Drayton",
-  "Oliver Goldsmith",
-  "Oliver Wendell Holmes",
-  "Oscar Wilde",
-  "Paul Laurence Dunbar",
-  "Percy Bysshe Shelley",
-  "Philip Freneau",
-  "Phillis Wheatley",
-  "Ralph Waldo Emerson",
-  "Richard Crashaw",
-  "Richard Lovelace",
-  "Robert Browning",
-  "Robert Burns",
-  "Robert Herrick",
-  "Robert Louis Stevenson",
-  "Robert Southey",
-  "Robinson",
-  "Rupert Brooke",
-  "Samuel Coleridge",
-  "Samuel Johnson",
-  "Sarah Flower Adams",
-  "Sidney Lanier",
-  "Sir John Suckling",
-  "Sir Philip Sidney",
-  "Sir Thomas Wyatt",
-  "Sir Walter Raleigh",
-  "Sir Walter Scott",
-  "Stephen Crane",
-  "Thomas Campbell",
-  "Thomas Chatterton",
-  "Thomas Flatman",
-  "Thomas Gray",
-  "Thomas Hood",
-  "Thomas Moore",
-  "Thomas Warton",
-  "Walt Whitman",
-  "Walter Savage Landor",
-  "Wilfred Owen",
-  "William Allingham",
-  "William Barnes",
-  "William Blake",
-  "William Browne",
-  "William Cowper",
-  "William Cullen Bryant",
-  "William Ernest Henley",
-  "William Lisle Bowles",
-  "William Morris",
-  "William Shakespeare",
-  "William Topaz McGonagall",
-  "William Vaughn Moody",
-  "William Wordsworth",
-];
-
 const knuthShuffle = (array: string[]) => {
   let currentIndex = array.length;
   // While there remain elements to shuffle...
@@ -151,33 +19,50 @@ const knuthShuffle = (array: string[]) => {
       array[currentIndex],
     ];
   }
-  return array;
 };
 
 export default function Index() {
   const [poem, setPoem] = useState<Poem | null>(null);
+  const [poets, setPoets] = useState<string[]>([]);
   const [linesShown, setLinesShown] = useState<number>(1);
   const [possibleAuthors, setPossibleAuthors] = useState<string[]>([]);
   const [score, setScore] = useState<number>(0);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   let scrollViewRef = useRef<ScrollView | null>(null);
 
+  const loadPoets = useCallback(() => {
+    fetch("https://poetrydb.org/authors")
+      .then((res) => res.json())
+      .then((data: { authors: string[] }) => {
+        setPoets(data.authors);
+      });
+  }, []);
+
   const fetchPoetry = useCallback(() => {
     fetch("https://poetrydb.org/random/1")
       .then((res) => res.json())
       .then((data) => {
-        const shuffledPoets = knuthShuffle(poets);
-        let choices = shuffledPoets.slice(0, 3);
-        choices.push(data[0].author);
-        choices = knuthShuffle(choices);
+        const poetsCopy = [...poets];
+        const correctAuthor = data[0].author;
+        poetsCopy.splice(poetsCopy.indexOf(correctAuthor), 1);
+        knuthShuffle(poetsCopy);
+        const choices = poetsCopy.slice(0, 3);
+        choices.push(correctAuthor);
+        knuthShuffle(choices);
         setPoem(data[0]);
         setPossibleAuthors(choices);
       });
-  }, []);
+  }, [poets]);
 
   useEffect(() => {
-    fetchPoetry();
-  }, [fetchPoetry]);
+    loadPoets();
+  }, [loadPoets]);
+
+  useEffect(() => {
+    if (poets.length !== 0) {
+      fetchPoetry();
+    }
+  }, [fetchPoetry, poets.length]);
 
   const addLine = () => {
     if (!poem) return;
