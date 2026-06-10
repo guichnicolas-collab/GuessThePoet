@@ -6,75 +6,78 @@ type Poem = {
   lines: string[];
 };
 
-function getRandomInteger(max: number) {
-  return Math.floor(Math.random() * max);
-}
+const knuthShuffle = (array: string[]) => {
+  let currentIndex = array.length;
+  // While there remain elements to shuffle...
+  while (currentIndex !== 0) {
+    // Pick a remaining element...
+    let randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex],
+      array[currentIndex],
+    ];
+  }
+};
 
 export default function Index() {
-  const [poems, setPoems] = useState<Poem[]>([]);
+  const [poem, setPoem] = useState<Poem | null>(null);
+  const [poets, setPoets] = useState<string[]>([]);
   const [linesShown, setLinesShown] = useState<number>(1);
-  const [correctPoemIndex, setCorrectPoemIndex] = useState<
-    number | undefined
-  >();
+  const [possibleAuthors, setPossibleAuthors] = useState<string[]>([]);
   const [score, setScore] = useState<number>(0);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   let scrollViewRef = useRef<ScrollView | null>(null);
-  const fallbackPoetsRef = useRef<Set<string>>(
-    new Set([
-      "Amy Levy",
-      "John Milton",
-      "Geoffrey Chaucer",
-      "Alexander Pope",
-      "Percy Bysshe Shelley",
-      "Isaac Watts",
-      "Edgar Allan Poe",
-    ]),
-  );
 
-  const fetchPoetry = useCallback(() => {
-    fetch("https://poetrydb.org/random/4")
+  const loadPoets = useCallback(() => {
+    fetch("https://poetrydb.org/authors")
       .then((res) => res.json())
-      .then((data) => {
-        const correctAnswerIndex = getRandomInteger(data.length);
-        for (let i = 0; i < data.length; i++) {
-          if (
-            i !== correctAnswerIndex &&
-            data.some(
-              (poem: Poem, index: number) =>
-                poem.author === data[i].author && index !== i,
-            )
-          ) {
-            const pool = [...fallbackPoetsRef.current];
-            data[i].author = pool[getRandomInteger(pool.length)];
-          }
-        }
-        for (const poem of data) {
-          fallbackPoetsRef.current.add(poem.author);
-        }
-        setPoems(data);
-        setCorrectPoemIndex(correctAnswerIndex);
+      .then((data: { authors: string[] }) => {
+        setPoets(data.authors);
       });
   }, []);
 
+  const fetchPoetry = useCallback(() => {
+    fetch("https://poetrydb.org/random/1")
+      .then((res) => res.json())
+      .then((data) => {
+        const poetsCopy = [...poets];
+        const correctAuthor = data[0].author;
+        poetsCopy.splice(poetsCopy.indexOf(correctAuthor), 1);
+        knuthShuffle(poetsCopy);
+        const choices = poetsCopy.slice(0, 3);
+        choices.push(correctAuthor);
+        knuthShuffle(choices);
+        setPoem(data[0]);
+        setPossibleAuthors(choices);
+      });
+  }, [poets]);
+
   useEffect(() => {
-    fetchPoetry();
-  }, [fetchPoetry]);
+    loadPoets();
+  }, [loadPoets]);
 
-  const handleButtonPress = () => {
-    if (!correctPoemIndex) return;
+  useEffect(() => {
+    if (poets.length !== 0) {
+      fetchPoetry();
+    }
+  }, [fetchPoetry, poets.length]);
 
-    if (poems[correctPoemIndex].lines[linesShown + 1]) {
+  const addLine = () => {
+    if (!poem) return;
+
+    if (poem?.lines[linesShown + 1]) {
       setLinesShown((prev) => prev + 1);
     } else {
       setLinesShown((prev) => prev + 2);
     }
   };
 
-  const selectPoet = (index: number) => {
-    setIsCorrect(index === correctPoemIndex);
-    setPoems([]);
+  const selectPoet = (author: string) => {
+    setIsCorrect(author === poem?.author);
+    setPoem(null);
     fetchPoetry();
-    setCorrectPoemIndex(undefined);
     setLinesShown(1);
     setTimeout(() => {
       setIsCorrect(null);
@@ -91,7 +94,7 @@ export default function Index() {
     );
   }
 
-  if (poems.length === 0 || correctPoemIndex === undefined) {
+  if (poem === null) {
     return (
       <View style={styles.loadingContainer}>
         <Text>Loading...</Text>
@@ -99,8 +102,7 @@ export default function Index() {
     );
   }
 
-  const isNewLineButtonEnabled =
-    linesShown < poems[correctPoemIndex].lines.length;
+  const isNewLineButtonEnabled = linesShown < poem?.lines.length;
 
   return (
     <View style={styles.container}>
@@ -115,29 +117,27 @@ export default function Index() {
         style={{ marginBottom: 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {poems[correctPoemIndex].lines
-          .slice(0, linesShown)
-          .map((line, index) => (
-            <Text key={index} style={{ marginBottom: 6, fontSize: 16 }}>
-              {line.trim()}
-            </Text>
-          ))}
+        {poem?.lines.slice(0, linesShown).map((line, index) => (
+          <Text key={index} style={{ marginBottom: 6, fontSize: 16 }}>
+            {line.trim()}
+          </Text>
+        ))}
       </ScrollView>
       <View style={{ gap: 5 }}>
-        {poems.map((poem, index) => (
+        {possibleAuthors.map((author, index) => (
           <Pressable
             key={index}
             style={styles.poetChoiceButton}
             onPress={() => {
-              selectPoet(index);
+              selectPoet(author);
             }}
           >
-            <Text>{poem.author}</Text>
+            <Text>{author}</Text>
           </Pressable>
         ))}
       </View>
       <Pressable
-        onPress={handleButtonPress}
+        onPress={addLine}
         style={
           isNewLineButtonEnabled
             ? styles.newLineButton
